@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: freefire-auto-like-bot
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: ADMIN_IDS
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DATABASE
+        value: freefire_like
+      - key: LOG_CHANNEL_ID
+        sync: false
+      - key: HL_GAMING_USERUID
+        sync: false
+      - key: LIKE_API_KEY
+        sync: false
+      - key: NAME_CHECK_API_KEY
+        sync: false
