@@ -55,3 +55,21 @@ def log_channel() -> str:
 def h(s: str) -> str:
     """HTML-escape, matching PHP's htmlspecialchars(ENT_QUOTES)."""
     return html.escape(s or "", quote=True)
+
+
+_SMALL_CAPS_MAP = str.maketrans(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢ",
+)
+
+
+def sc(text: str) -> str:
+    """Render Latin letters as small-caps Unicode look-alikes (Aa -> ᴀ).
+
+    Only A-Z/a-z are mapped; digits, punctuation, emoji, and Bangla text
+    pass through unchanged since Unicode has no small-caps block for
+    Bangla. Never pass a string containing raw HTML tags (e.g. "<b>...")
+    into this function — call it on the inner label only and wrap the
+    tags around the result, or the tag letters themselves get mangled.
+    """
+    return (text or "").translate(_SMALL_CAPS_MAP)
