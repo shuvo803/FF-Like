@@ -5,6 +5,13 @@ import requests
 
 from config import app_url, envv, log_channel
 
+# A shared session reuses TCP/TLS connections across requests instead of
+# renegotiating a new HTTPS connection on every Telegram API call — this
+# alone typically saves 100-300ms per call once the pool is warm.
+_session = requests.Session()
+
+_webhook_registered = False
+
 
 def tg(method: str, data: dict | None = None) -> dict:
     data = data or {}
@@ -13,7 +20,7 @@ def tg(method: str, data: dict | None = None) -> dict:
         return {"ok": False, "description": "BOT_TOKEN missing"}
     url = f"https://api.telegram.org/bot{token}/{method}"
     try:
-        resp = requests.post(url, data=data, timeout=(8, 30))
+        resp = _session.post(url, data=data, timeout=(5, 15))
     except requests.RequestException as e:
         return {"ok": False, "description": str(e) or "Telegram request failed"}
     try:
@@ -53,10 +60,13 @@ def webhook_secret() -> str:
 
 
 def set_webhook_if_possible() -> None:
+    global _webhook_registered
+    if _webhook_registered:
+        return
     url = app_url()
     if not url:
         return
-    tg(
+    r = tg(
         "setWebhook",
         {
             "url": f"{url}/webhook",
@@ -64,3 +74,5 @@ def set_webhook_if_possible() -> None:
             "allowed_updates": json.dumps(["message", "callback_query"]),
         },
     )
+    if r.get("ok"):
+        _webhook_registered = True
