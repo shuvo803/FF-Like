@@ -4,22 +4,45 @@ from config import envv
 
 _client = None
 _db = None
+_initialized = False
 
 
 def db():
-    """Lazily create (and cache) the MongoDB database handle."""
+    """Lazily create (and cache) the MongoDB database handle.
+
+    The client (and its connection pool) is created once per worker
+    process and reused for every request — creating a new MongoClient
+    per request is a common, easy-to-miss source of slow responses.
+    """
     global _client, _db
     if _db is not None:
         return _db
     uri = envv("MONGODB_URI")
     if not uri:
         raise RuntimeError("MONGODB_URI is missing")
-    _client = MongoClient(uri, serverSelectionTimeoutMS=8000, connectTimeoutMS=8000)
+    _client = MongoClient(
+        uri,
+        serverSelectionTimeoutMS=5000,
+        connectTimeoutMS=5000,
+        maxPoolSize=20,
+        retryWrites=True,
+    )
     _db = _client[envv("MONGODB_DATABASE", "freefire_like")]
     return _db
 
 
 def init_db() -> None:
+    """Create indexes/defaults once per process, not on every request.
+
+    create_index() is idempotent but still a round-trip to MongoDB;
+    calling it on every webhook update (as before) added needless
+    latency to every single message. A process-local flag makes this
+    a one-time cost after cold start.
+    """
+    global _initialized
+    if _initialized:
+        return
+
     d = db()
     d.users.create_index([("telegram_id", ASCENDING)], unique=True)
     d.users.create_index([("last_activity", DESCENDING)])
@@ -34,6 +57,8 @@ def init_db() -> None:
             {"$setOnInsert": {"key": key, "value": value}},
             upsert=True,
         )
+
+    _initialized = True
 
 
 def get_setting(key: str, default=None):
