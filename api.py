@@ -27,16 +27,20 @@ import requests
 
 from config import envv
 
+# Reused across calls so repeated HL Gaming requests don't pay a fresh
+# TLS-handshake cost every time.
+_session = requests.Session()
+
 
 def hl_post(url: str, payload: dict) -> dict:
     if not url:
         return {"ok": False, "error": "API URL is not configured", "raw": ""}
     try:
-        resp = requests.post(
+        resp = _session.post(
             url,
             json=payload,
             headers={"Accept": "application/json", "Content-Type": "application/json"},
-            timeout=(8, 20),
+            timeout=(5, 15),
             allow_redirects=False,
         )
     except requests.RequestException as e:
