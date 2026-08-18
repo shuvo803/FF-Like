@@ -44,6 +44,10 @@ def edit_text(chat, mid: int, text: str, kb: list | None = None) -> dict:
     return tg("editMessageText", d)
 
 
+def delete_message(chat, mid: int) -> dict:
+    return tg("deleteMessage", {"chat_id": chat, "message_id": mid})
+
+
 def answer_cb(cb_id: str, text: str = "", alert: bool = False) -> None:
     tg("answerCallbackQuery", {"callback_query_id": cb_id, "text": text, "show_alert": alert})
 
